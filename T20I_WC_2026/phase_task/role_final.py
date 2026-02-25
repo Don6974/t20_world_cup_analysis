@@ -3,10 +3,6 @@ import pandas as pd
 import os
 import numpy as np
 
-# =====================================================
-# UTILITY
-# =====================================================
-
 def min_max(series):
     if series.max() == series.min():
         return series * 0
@@ -17,21 +13,15 @@ def stage(title):
     print(title)
     print("="*65)
 
-# =====================================================
-# STAGE 1: LOAD DATA
-# =====================================================
-
+# STAGE 1: LOADING DATA
 stage("STAGE 1: DATA LOADING & COVERAGE")
-
 rows = []
-
 for file in os.listdir("."):
     print(file)
     if file.endswith(".json"):
         with open(file) as f:
             data = json.load(f)
         print(file)
-
         for innings in data["innings"]:
             for over_data in innings["overs"]:
                 for delivery in over_data["deliveries"]:
@@ -50,14 +40,11 @@ for file in os.listdir("."):
                     })
 
 df = pd.DataFrame(rows)
-
 print("Matches Available:", df["match"].nunique())
 print("Unique Batters:", df["batter"].nunique())
 print("Unique Bowlers:", df["bowler"].nunique())
 
-# =====================================================
 # STAGE 2: 4-PHASE CLASSIFICATION
-# =====================================================
 
 stage("STAGE 2: 4-PHASE STRUCTURE")
 
@@ -77,9 +64,7 @@ df["is_boundary"] = df["batter_runs"].isin([4,6])
 
 print(df["phase"].value_counts())
 
-# =====================================================
 # STAGE 3: BATTING AGGREGATION
-# =====================================================
 
 stage("STAGE 3: BATTING AGGREGATION & ELIGIBILITY")
 
@@ -106,9 +91,7 @@ print(bat.sort_values("runs_per_match",ascending=False)[
     ["matches","runs_per_match","strike_rate"]
 ].head())
 
-# =====================================================
 # STAGE 4: ROLE CLASSIFICATION (4-PHASE)
-# =====================================================
 
 stage("STAGE 4: ROLE CLASSIFICATION")
 
@@ -151,9 +134,7 @@ bat["role"] = bat.index.map(role_map)
 
 print(bat["role"].value_counts())
 
-# =====================================================
 # STAGE 5: BATTING SCORING
-# =====================================================
 
 stage("STAGE 5: BATTING SCORING")
 
@@ -174,9 +155,7 @@ print(bat.sort_values("composite",ascending=False)[
     ["matches","runs_per_match","strike_rate","role","composite"]
 ].head(10))
 
-# =====================================================
 # STAGE 6: BOWLING AGGREGATION
-# =====================================================
 
 stage("STAGE 6: BOWLING AGGREGATION & ELIGIBILITY")
 
@@ -204,9 +183,8 @@ print(bowl.sort_values("wpm",ascending=False)[
     ["matches","wpm","economy"]
 ].head())
 
-# =====================================================
+
 # STAGE 7: BOWLER ROLE CLASSIFICATION
-# =====================================================
 
 stage("STAGE 7: BOWLER ROLE CLASSIFICATION")
 
@@ -239,9 +217,7 @@ bowl["role"] = bowl.index.map(b_role)
 
 print(bowl["role"].value_counts())
 
-# =====================================================
 # STAGE 8: BOWLING SCORING
-# =====================================================
 
 stage("STAGE 8: BOWLING SCORING")
 
@@ -260,9 +236,7 @@ print(bowl.sort_values("composite",ascending=False)[
     ["matches","economy","wpm","role","composite"]
 ].head(10))
 
-# =====================================================
 # STAGE 9: FINAL XI SELECTION (NO DUPLICATES)
-# =====================================================
 
 stage("STAGE 9: FINAL XI SELECTION")
 
