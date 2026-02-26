@@ -26,7 +26,7 @@ for file in os.listdir("."):
             for over_data in innings["overs"]:
                 for delivery in over_data["deliveries"]:
                     extras = delivery.get("extras", {})
-                    legal = not ("wides" in extras or "noballs" in extras)
+                    legal = not ("wides" in extras or "noballs" in extras) #did not consider legbyes and byes
 
                     rows.append({
                         "match": file,
@@ -49,7 +49,7 @@ print("Unique Bowlers:", df["bowler"].nunique())
 stage("STAGE 2: 4-PHASE STRUCTURE")
 
 def phase(over):
-    if over <= 5:
+    if over <= 5: #over 1 to 6, but starts from 0 so 0-5
         return "Powerplay"
     elif over <= 10:
         return "EarlyMiddle"
@@ -78,7 +78,7 @@ bat = df[df["legal"]].groupby("batter").agg(
 
 print("Total Batters Before Filter:", len(bat))
 
-bat = bat[bat["matches"] >= 3]
+bat = bat[bat["matches"] >= 3] #considering person who plays atleast 3 matches
 print("After Eligibility (>=3 matches):", len(bat))
 
 bat["strike_rate"] = bat["runs"]/bat["balls"]*100
@@ -86,6 +86,7 @@ bat["runs_per_match"] = bat["runs"]/bat["matches"]
 bat["boundary_pct"] = bat["boundaries"]/bat["balls"]
 bat["dot_pct"] = bat["dots"]/bat["balls"]
 
+#TODO
 print("Top 5 Runs per Match:")
 print(bat.sort_values("runs_per_match",ascending=False)[
     ["matches","runs_per_match","strike_rate"]
@@ -119,6 +120,7 @@ for batter in bat.index:
     early_sr = pdata[pdata["phase"]=="EarlyMiddle"]["phase_sr"].mean()
     late_sr = pdata[pdata["phase"]=="LateMiddle"]["phase_sr"].mean()
 
+#TODO
     if pp_share > 0.45:
         role_map[batter] = "Opener"
     elif death_share > 0.35:
@@ -142,14 +144,16 @@ bat["sr_norm"] = min_max(bat["strike_rate"])
 bat["rpm_norm"] = min_max(bat["runs_per_match"])
 bat["boundary_norm"] = min_max(bat["boundary_pct"])
 bat["dot_control"] = min_max(1 - bat["dot_pct"])
-
+#TODO
 bat["composite"] = (
     0.35*bat["sr_norm"] +
     0.30*bat["rpm_norm"] +
     0.20*bat["boundary_norm"] +
     0.15*bat["dot_control"]
 )
+print(bat)
 
+#TODO - go for top 10 openers or?
 print("Top 10 Batters:")
 print(bat.sort_values("composite",ascending=False)[
     ["matches","runs_per_match","strike_rate","role","composite"]
@@ -169,8 +173,9 @@ bowl = df[df["legal"]].groupby("bowler").agg(
 
 print("Total Bowlers Before Filter:", len(bowl))
 
+#TODO
 bowl["overs"] = bowl["balls"]/6
-bowl = bowl[(bowl["matches"]>=3) & (bowl["overs"]>=8)]
+bowl = bowl[(bowl["matches"]>=3) & (bowl["overs"]>=8)] #overs atleast 8 eligibility criteria
 
 print("After Eligibility:", len(bowl))
 
@@ -187,7 +192,7 @@ print(bowl.sort_values("wpm",ascending=False)[
 # STAGE 7: BOWLER ROLE CLASSIFICATION
 
 stage("STAGE 7: BOWLER ROLE CLASSIFICATION")
-
+#TODO. maybe change the phases of bowlers
 b_phase = df[df["legal"]].groupby(["bowler","phase"]).agg(
     balls=("legal","sum")
 ).reset_index()
@@ -205,7 +210,7 @@ for bowler in bowl.index:
     pdata = b_phase[b_phase["bowler"]==bowler]
     pp = pdata[pdata["phase"]=="Powerplay"]["share"].sum()
     death = pdata[pdata["phase"]=="Death"]["share"].sum()
-
+#TODO check for spinner is it really spinner?
     if death > 0.30:
         b_role[bowler] = "Death"
     elif pp > 0.35:
@@ -249,9 +254,9 @@ finisher = bat[bat["role"]=="Finisher"].sort_values("composite",ascending=False)
 team_bat = pd.concat([openers, anchor, middle_hitter, middle, finisher])
 team_bat = team_bat[~team_bat.index.duplicated()]
 
-new_ball = bowl[bowl["role"]=="NewBall"].sort_values("composite",ascending=False).head(1)
+new_ball = bowl[bowl["role"]=="NewBall"].sort_values("composite",ascending=False).head(2)
 death = bowl[bowl["role"]=="Death"].sort_values("composite",ascending=False).head(1)
-spinners = bowl[bowl["role"]=="Spinner"].sort_values("composite",ascending=False).head(2)
+spinners = bowl[bowl["role"]=="Spinner"].sort_values("composite",ascending=False).head(1)
 
 team_bowl = pd.concat([new_ball, death, spinners])
 team_bowl = team_bowl[~team_bowl.index.isin(team_bat.index)]
